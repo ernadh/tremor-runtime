@@ -19,6 +19,7 @@ pub mod identity;
 pub mod prelude;
 pub mod runtime;
 pub mod trickle;
+pub mod validator;
 
 use super::{Event, NodeConfig};
 use crate::errors::*;

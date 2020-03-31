@@ -60,6 +60,19 @@ impl TrickleOperator {
                             id: op.id.clone().into(),
                         })
                     }
+                    ("validator", "json_schema") => {
+                        use op::validator::json_schema::*;
+                        Box::new(JsonSchema {
+                            config: Config {
+                                schema: op
+                                    .params
+                                    .as_ref()
+                                    .and_then(|v| v.get("schema"))
+                                    .and_then(|v| v.as_str().map(ToString::to_string))
+                                    .ok_or_else(|| missing_config("schema"))?,
+                            },
+                        })
+                    }
                     ("generic", "backpressure") => {
                         use op::generic::backpressure::*;
                         let outputs = op

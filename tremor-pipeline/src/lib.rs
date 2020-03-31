@@ -360,10 +360,12 @@ pub fn buildin_ops(
     use op::generic::{BackpressureFactory, BatchFactory, CounterFactory};
     use op::grouper::BucketGrouperFactory;
     use op::identity::PassthroughFactory;
+    use op::validator::JsonSchemaFactory;
     use op::runtime::TremorFactory;
     let name_parts: Vec<&str> = node.op_type.split("::").collect();
     let factory = match name_parts.as_slice() {
         ["passthrough"] => PassthroughFactory::new_boxed(),
+        ["json_schema"] => JsonSchemaFactory::new_boxed(),
         ["debug", "history"] => EventHistoryFactory::new_boxed(),
         ["runtime", "tremor"] => TremorFactory::new_boxed(),
         ["grouper", "bucket"] => BucketGrouperFactory::new_boxed(),

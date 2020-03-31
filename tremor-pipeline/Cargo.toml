@@ -24,6 +24,8 @@ halfbrown = "0.1"
 log = "0.4"
 rental = "0.5"
 regex = "1"
+value-trait = "0.1.3"
+simd-json-schema = { path = "/Users/eh356e/sandbox/simd-json-schema" }
 
 [dev-dependencies]
 criterion = "0.3"
