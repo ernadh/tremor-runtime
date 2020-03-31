@@ -1,8 +1,7 @@
 use crate::op::prelude::*;
 use crate::{ConfigImpl, Event, Operator};
 use simd_json::value::{BorrowedValue as Value, OwnedValue};
-use value_trait::Builder;
-use value_trait::Mutable;
+use argonaut;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -34,32 +33,42 @@ op!(JsonSchemaFactory (node) {
 });
 
 impl Operator for JsonSchema {
-    #[allow(mutable_transmutes)]
     fn on_event(&mut self, _port: &str, _state: &mut Value<'static>, event: Event) -> Result<Vec<(Cow<'static, str>, Event)>> {
         let (payload,_) = event.data.parts();
 
-        let mut prop = OwnedValue::object();
-        let mut cat = OwnedValue::object();
-        cat.insert("type", "number").unwrap();
-        cat.insert("minimum", 11.0).unwrap();
-        let mut pat = OwnedValue::object();
-        pat.insert("type", "string").unwrap();
-        prop.insert("created_at", cat).unwrap();
-        prop.insert("produced_at", pat).unwrap();
-        let mut sobj = OwnedValue::object();
-        sobj.insert("$id", "https://example.com/person.schema.json").unwrap();
-        sobj.insert("$schema", "http://json-schema.org/draft-07/schema#").unwrap();
-        sobj.insert("title", "Event").unwrap();
-        sobj.insert("type", "object").unwrap();
-        sobj.insert("properties", prop).unwrap();
-        sobj.insert("additionalProperties", true).unwrap();
-        let mut required = OwnedValue::array();
-        required.push("created_at").unwrap();
-        required.push("produced_at").unwrap();
-        sobj.insert("required", required).unwrap();
+        let schema_obj = argonaut::object(|json| {
+            json.set("$id", OwnedValue::from("https://wayfair.com/accelerator.event.schema.json"));
+            json.set("$schema", OwnedValue::from("http://json-schema.org/draft-07/schema#"));
+            json.set("title", OwnedValue::from("Event"));
+            json.set("type", OwnedValue::from("object"));
+
+            let props = argonaut::object(|json| {
+                let created_at = argonaut::object(|json| {
+                    json.set("type", OwnedValue::from("number"));
+                    json.set("minimum", OwnedValue::from(11.0));
+                }).unwrap();
+
+                let produced_at = argonaut::object(|json| {
+                    json.set("type", OwnedValue::from("number"));
+                }).unwrap();
+
+                json.set("created_at", created_at);
+                json.set("produced_at", produced_at);
+            });
+
+            let required = argonaut::array(|json| {
+                json.push(OwnedValue::from("created_at")); 
+                json.push(OwnedValue::from("created_at")); 
+            });
+
+            json.set("additionalProperties", OwnedValue::from(true));
+            json.set("properties", props.unwrap());
+            json.set("required", required.unwrap());
+        }).unwrap();
 
         let mut scope: simd_json_schema::json_schema::scope::Scope<Value> = simd_json_schema::json_schema::scope::Scope::new();
-        let schema = scope.compile_and_return(sobj.to_owned(), false).unwrap();
+
+        let schema = scope.compile_and_return(schema_obj, false).unwrap();
         let valid = schema.validate(&payload);
         println!("{:?}", valid);
 
