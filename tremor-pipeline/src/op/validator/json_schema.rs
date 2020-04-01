@@ -1,7 +1,9 @@
 use crate::op::prelude::*;
 use crate::{ConfigImpl, Event, Operator};
-use simd_json::value::{BorrowedValue as Value, OwnedValue};
+use simd_json::value::{BorrowedValue, OwnedValue};
 use argonaut;
+use value_trait::Builder;
+//use value_trait::Mutable;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -11,31 +13,14 @@ pub struct Config {
 impl ConfigImpl for Config {}
 
 #[derive(Debug, Clone)]
-pub struct JsonSchema {
+pub struct JsonSchema<'scope, 'schema> {
     pub config: Config,
+    //schemas: HashMap<String, simd_json_schema::json_schema::schema::ScopedSchema<'scope, 'schema, BorrowedValue<'scope>>>
+    schema: simd_json_schema::json_schema::schema::ScopedSchema<'scope, 'schema, BorrowedValue>
 }
 
-impl From<Config> for JsonSchema {
+impl From<Config> for JsonSchema<'_, '_> {
     fn from(config: Config) -> Self {
-
-        Self {
-            config,
-        }
-    }
-}
-op!(JsonSchemaFactory (node) {
-    if let Some(map) = &node.config {
-        let config: Config = Config::new(map)?;
-        Ok(Box::new(JsonSchema::from(config)))
-    } else {
-        Err(ErrorKind::MissingOpConfig(node.id.to_string()).into())
-    }
-});
-
-impl Operator for JsonSchema {
-    fn on_event(&mut self, _port: &str, _state: &mut Value<'static>, event: Event) -> Result<Vec<(Cow<'static, str>, Event)>> {
-        let (payload,_) = event.data.parts();
-
         let schema_obj = argonaut::object(|json| {
             json.set("$id", OwnedValue::from("https://wayfair.com/accelerator.event.schema.json"));
             json.set("$schema", OwnedValue::from("http://json-schema.org/draft-07/schema#"));
@@ -66,10 +51,33 @@ impl Operator for JsonSchema {
             json.set("required", required.unwrap());
         }).unwrap();
 
-        let mut scope: simd_json_schema::json_schema::scope::Scope<Value> = simd_json_schema::json_schema::scope::Scope::new();
+        let mut scope: simd_json_schema::json_schema::scope::Scope<BorrowedValue> = simd_json_schema::json_schema::scope::Scope::new();
 
         let schema = scope.compile_and_return(schema_obj, false).unwrap();
-        let valid = schema.validate(&payload);
+
+        Self {
+            config,
+            schema,
+        }
+    }
+}
+op!(JsonSchemaFactory (node) {
+    if let Some(map) = &node.config {
+        let mut scope: simd_json_schema::json_schema::scope::Scope<Value> = simd_json_schema::json_schema::scope::Scope::new();
+
+        let schema = scope.compile_and_return(OwnedValue::object(), false).unwrap();
+        let config: Config = Config::new(map)?;
+        Ok(Box::new(JsonSchema::from(config)))
+    } else {
+        Err(ErrorKind::MissingOpConfig(node.id.to_string()).into())
+    }
+});
+
+impl Operator for JsonSchema<'_, '_> {
+    fn on_event(&mut self, _port: &str, _state: &mut Value<'static>, event: Event) -> Result<Vec<(Cow<'static, str>, Event)>> {
+        let (payload,_) = event.data.parts();
+
+        let valid = self.schema.validate(payload);
         println!("{:?}", valid);
 
         Ok(vec![])

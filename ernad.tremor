@@ -1,0 +1,22 @@
+define validator::json_schema operator js
+with
+  schema = """
+{
+  "$id": "https://example.com/person.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Event",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Lowercase stage and action of CI/CD joined with a dot."
+    }
+  }
+}
+"""
+end;
+
+create operator js from js;
+
+select event from in into js;
+select event from js into out;
