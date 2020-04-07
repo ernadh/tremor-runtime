@@ -1,22 +1,26 @@
-define validator::json_schema operator js
+define validator::json_schema operator order_validator
 with
   schema = """
 {
-  "$id": "https://example.com/person.schema.json",
+  "$id": "https://wayfair.com/order.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Event",
   "type": "object",
   "properties": {
-    "name": {
+    "amount": {
+      "type": "number",
+      "minimum": 11.0,
+    },
+    "location": {
       "type": "string",
-      "description": "Lowercase stage and action of CI/CD joined with a dot."
+      "enum": ["EU", "USA"],
     }
-  }
+  },
+  "required": ["amount"],
 }
 """
 end;
 
-create operator js from js;
-
-select event from in into js;
-select event from js into out;
+create operator orders from order_validator;
+select event from in into orders;
+select event from orders/valid into out;

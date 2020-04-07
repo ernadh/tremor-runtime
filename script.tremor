@@ -1,0 +1,10 @@
+define script validate
+script
+  match {"raw": event} of 
+    case  r= %{raw ~= re|^<134>|} => emit r.raw => "ok" #testing, that string is syslog with needed facility
+    default => emit event => "invalid"
+  end
+end; 
+create script validate;
+select event from in into validate;
+select event from validate/ok into out;

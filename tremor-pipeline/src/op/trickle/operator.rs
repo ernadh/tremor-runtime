@@ -71,7 +71,7 @@ impl TrickleOperator {
                                     .and_then(|v| v.as_str().map(ToString::to_string))
                                     .ok_or_else(|| missing_config("schema"))?,
                             },
-                            schema: HashMap::new(),
+                            schemas: HashMap::new(),
                         })
                     }
                     ("generic", "backpressure") => {
