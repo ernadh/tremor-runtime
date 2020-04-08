@@ -231,14 +231,14 @@ fn script_run_cmd(cmd: &ArgMatches<'_>) -> Result<()> {
                     Ok(_result) => {
                         println!(
                             "{}",
-                            serde_json::json!({"status": true, "data": l, "meta": global_map, "line": num, "result": _result})
+                            simd_json::json!({"status": true, "data": l, "meta": global_map, "line": num, "result": _result})
                         );
                     }
                     Err(reason) => {
                         let err_str = reason.to_string();
                         println!(
                             "{}",
-                            serde_json::json!({"status": false, "data": l, "error": err_str, "meta": global_map, "line": num})
+                            simd_json::json!({"status": false, "data": l, "error": err_str, "meta": global_map, "line": num})
                         );
                     }
                 };
@@ -246,14 +246,14 @@ fn script_run_cmd(cmd: &ArgMatches<'_>) -> Result<()> {
             Ok(_) => {
                 println!(
                     "{}",
-                    serde_json::json!({"status": false, "data": l, "error": "failed to decode", "line": num})
+                    simd_json::json!({"status": false, "data": l, "error": "failed to decode", "line": num})
                 );
             }
             Err(reason) => {
                 let err_str = reason.to_string();
                 println!(
                     "{}",
-                    serde_json::json!({"status": false, "data": l, "error": err_str, "line": num})
+                    simd_json::json!({"status": false, "data": l, "error": err_str, "line": num})
                 );
             }
         }
@@ -296,14 +296,14 @@ fn grok_run_cmd(cmd: &ArgMatches<'_>) -> Result<()> {
             Ok(j) => {
                 println!(
                     "{}",
-                    serde_json::json!({"status": true, "data": l, "meta": &test_pattern, "line": num, "grokked": j})
+                    simd_json::json!({"status": true, "data": l, "meta": &test_pattern, "line": num, "grokked": j})
                 );
             }
             Err(reason) => {
                 let err_str = reason.to_string();
                 println!(
                     "{}",
-                    serde_json::json!({"status": false, "data": l, "error": err_str, "meta": "PATTERN", "line": num})
+                    simd_json::json!({"status": false, "data": l, "error": err_str, "meta": "PATTERN", "line": num})
                 );
             }
         }
@@ -439,7 +439,13 @@ async fn conductor_target_create_cmd(app: &mut TremorApp<'_>, cmd: &ArgMatches<'
     let id = cmd.value_of("TARGET_ID").ok_or("TARGET_ID not provided")?;
     let path_to_file = cmd.value_of("SOURCE").ok_or("SOURCE not provided")?;
     let json = load(path_to_file)?;
-    let endpoints: Vec<String> = serde_json::from_value(json)?;
+    let endpoints: Vec<String> = json
+        .as_array()
+        .ok_or_else(|| Error::from("Invalid Configuration"))?
+        .iter()
+        .filter_map(ValueTrait::as_str)
+        .map(String::from)
+        .collect();
     app.config.instances.insert(id.to_string(), endpoints);
     save_config(&app.config)
 }
@@ -692,7 +698,7 @@ async fn conductor_instance_cmd(
 // Utility code //
 //////////////////
 
-fn load(path_to_file: &str) -> Result<serde_json::Value> {
+fn load(path_to_file: &str) -> Result<simd_json::OwnedValue> {
     let mut source = File::open(path_to_file)?;
     let ext = Path::new(path_to_file)
         .extension()
@@ -704,7 +710,7 @@ fn load(path_to_file: &str) -> Result<serde_json::Value> {
     if ext == "yaml" || ext == "yml" {
         Ok(serde_yaml::from_slice(raw.as_slice())?)
     } else if ext == "json" {
-        Ok(serde_json::from_slice(raw.as_slice())?)
+        Ok(simd_json::to_owned_value(raw.as_mut_slice())?)
     } else {
         Err(Error::from(format!("Unsupported format: {}", ext)))
     }
@@ -735,7 +741,7 @@ async fn handle_response(mut response: surf::Response) -> Result<()> {
     Ok(())
 }
 
-fn ser(app: &TremorApp<'_>, json: &serde_json::Value) -> Result<String> {
+fn ser(app: &TremorApp<'_>, json: &simd_json::OwnedValue) -> Result<String> {
     Ok(match app.format {
         FormatKind::Json => serde_json::to_string(&json)?,
         FormatKind::Yaml => serde_yaml::to_string(&json)?,

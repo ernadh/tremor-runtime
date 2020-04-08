@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use super::prelude::*;
-use serde_json;
 use simd_json::{self, BorrowedValue as Value};
 
 #[derive(Clone)]

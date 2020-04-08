@@ -14,7 +14,6 @@
 
 use crate::registry::Registry;
 use crate::tremor_const_fn;
-use serde_json;
 use simd_json::to_owned_value;
 
 pub fn load(registry: &mut Registry) {

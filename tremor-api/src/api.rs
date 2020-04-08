@@ -189,7 +189,7 @@ async fn decode<T>(mut req: Request) -> Result<(Request, T)>
 where
     for<'de> T: Deserialize<'de>,
 {
-    let body = req.body_bytes().await?;
+    let mut body = req.body_bytes().await?;
     match content_type(&req) {
         Some(ResourceType::Yaml) => serde_yaml::from_slice(body.as_slice())
             .map_err(|e| {
@@ -199,7 +199,7 @@ where
                 )
             })
             .map(|data| (req, data)),
-        Some(ResourceType::Json) => serde_json::from_slice(body.as_slice())
+        Some(ResourceType::Json) => simd_json::from_slice(body.as_mut_slice())
             .map_err(|e| {
                 Error::Generic(
                     StatusCode::BAD_REQUEST,

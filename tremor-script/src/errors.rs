@@ -32,7 +32,6 @@ use lalrpop_util;
 use lalrpop_util::ParseError as LalrpopError;
 use regex;
 use serde::{Deserialize, Serialize};
-use serde_json;
 pub use simd_json::ValueType;
 use simd_json::{prelude::*, BorrowedValue as Value};
 use std::num;

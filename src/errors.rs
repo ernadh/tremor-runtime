@@ -28,7 +28,6 @@ use log4rs;
 use rdkafka;
 use rental;
 use rmp_serde;
-use serde_json;
 use serde_yaml;
 use std;
 use tremor_influx as influx;

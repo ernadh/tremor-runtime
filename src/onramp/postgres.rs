@@ -23,7 +23,6 @@ use crate::ramp::postgres::row_to_json;
 use crate::ramp::Config as CacheConfig;
 use chrono::prelude::*;
 use postgres::{Client, NoTls};
-use serde_json;
 use serde_yaml::Value;
 use simd_json::prelude::*;
 use std::time::Duration;
